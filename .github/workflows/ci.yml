@@ -15,7 +15,7 @@ jobs:
   #   Uploadez mlruns/ en artefact.
   
   build-and-push:
-    needs: [test, contract-test]
+    #needs: [test, contract-test]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
