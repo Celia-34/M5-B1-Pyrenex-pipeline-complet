@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install model deps
+      - name: Install deps
         run: |
           pip install -r services/model/requirements.txt pytest httpx
           pip install -r services/backend/requirements.txt pytest httpx

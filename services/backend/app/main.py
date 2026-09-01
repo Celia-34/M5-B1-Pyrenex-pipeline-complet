@@ -52,11 +52,16 @@ backend_upstream_errors_total = Counter(
 )
 backend_upstream_errors_total.labels(kind="unavailable")
 backend_upstream_errors_total.labels(kind="bad_response")
+backend_score_calls_total = Counter(
+    "backend_score_calls_total",
+    "Nombre total d'appels au endpoint /score.",
+    registry=metrics_registry,
+)
 
 
 @app.get("/metrics", include_in_schema=False)
 async def metrics() -> Response:
-    """Expose uniquement le compteur des erreurs du service model upstream."""
+    """Expose les compteurs d'appels et d'erreurs du backend."""
     return Response(
         content=generate_latest(metrics_registry),
         media_type=CONTENT_TYPE_LATEST,
@@ -72,6 +77,7 @@ async def health() -> HealthResponse:
 @app.post("/score", response_model=Prediction)
 async def score(application: LoanApplication, request: Request) -> Prediction:
     """Appelle le service model et comptabilise ses erreurs upstream."""
+    backend_score_calls_total.inc()
     request_id = getattr(request.state, "request_id", "n/a")
 
     try:

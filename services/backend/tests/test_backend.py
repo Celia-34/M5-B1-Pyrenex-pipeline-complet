@@ -9,11 +9,11 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-BACKEND_DIR = Path(__file__).parents[1] / "services" / "backend"
+BACKEND_DIR = Path(__file__).parents[1]
 sys.path.insert(0, str(BACKEND_DIR))
 
-from app import main as backend_main  # noqa: E402
-
+from app import main as app_module
+from app.main import app
 
 VALID_PAYLOAD = {
     "loan_amnt": 10_000.0,
@@ -64,7 +64,7 @@ class FakeAsyncClient:
 
 @pytest.fixture
 def client() -> TestClient:
-    return TestClient(backend_main.app)
+    return TestClient(app)
 
 
 def metric_value(client: TestClient, kind: str) -> float:
@@ -90,7 +90,7 @@ def install_fake_client(
     error: Exception | None = None,
 ) -> FakeAsyncClient:
     fake = FakeAsyncClient(response=response, error=error)
-    monkeypatch.setattr(backend_main.httpx, "AsyncClient", lambda: fake)
+    monkeypatch.setattr(app_module.httpx, "AsyncClient", lambda: fake)
     return fake
 
 
@@ -134,7 +134,7 @@ def test_score_returns_prediction_and_propagates_request_id(
     assert response.json() == VALID_PREDICTION
     assert total_calls_value(client) == before + 1
     assert fake.post_kwargs is not None
-    assert fake.post_kwargs["url"] == f"{backend_main.MODEL_URL}/predict"
+    assert fake.post_kwargs["url"] == f"{app_module.MODEL_URL}/predict"
     assert fake.post_kwargs["headers"] == {"X-Request-ID": "test-request-id"}
     assert fake.post_kwargs["json"] == VALID_PAYLOAD
 
@@ -156,7 +156,7 @@ def test_score_rejects_invalid_application_without_calling_model(
 def test_score_unavailable_returns_503_and_increments_metric(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    request = httpx.Request("POST", f"{backend_main.MODEL_URL}/predict")
+    request = httpx.Request("POST", f"{app_module.MODEL_URL}/predict")
     install_fake_client(monkeypatch, error=httpx.ConnectError("connection failed", request=request))
     before = metric_value(client, "unavailable")
 
