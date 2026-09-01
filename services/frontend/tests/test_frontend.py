@@ -17,7 +17,7 @@ from pathlib import Path
 import joblib
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = Path(__file__).resolve().parents[3]
 INDEX_HTML = REPO_ROOT / "services" / "frontend" / "html" / "index.html"
 MODEL_PATH = REPO_ROOT / "services" / "model" / "models" / "pyrenex_risk_v2.joblib"
 SCHEMAS_PY = REPO_ROOT / "services" / "backend" / "app" / "schemas.py"
