@@ -92,21 +92,43 @@ Vous repartez **chacun·e** du repo binôme, dans une branche perso
 
 ---
 
-## 🚀 Démarrage (le service `model` tourne déjà)
+## 🏗️ Schéma d'architecture
 
-```bash
-# 1. Environnement de tests local (optionnel mais conseillé)
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements-dev.txt
+```mermaid
+flowchart LR
+  user["Navigateur"] -->|http://localhost:8088| frontend["frontend\nNginx + formulaire"]
+  frontend -->|/api/score\nproxy_pass| backend["backend\nFastAPI :8001"]
+  backend -->|POST /predict\nMODEL_URL=http://model:8000| model["model\nFastAPI :8000"]
+  model --> artifact["Modèle M1\npyrenex_risk_v2.joblib"]
 
-# 2. Vérifier que la base fournie passe les tests
-pytest -v services/model/tests
+  prometheus["Prometheus :9090"] -->|scrape /metrics| backend
+  prometheus -->|scrape /metrics| model
+  grafana["Grafana :3001\nadmin / admin"] -->|datasource| prometheus
 
-# 3. Lancer ce qui est déjà câblé (model + prometheus + grafana)
+  compose["Docker Compose"] -. healthchecks .-> frontend
+  compose -. healthchecks .-> backend
+  compose -. healthchecks .-> model
+```
+
+| Service | Port hôte | Rôle |
+|---|---:|---|
+| `frontend` | 8088 | Formulaire web servi par Nginx, proxy `/api/` vers le backend |
+| `backend` | 8001 | Orchestrateur FastAPI : valide la requête, appelle `model`, expose `/health` et `/metrics` |
+| `model` | 8000 | API de scoring M1 : `/predict`, `/health`, `/metrics` |
+| `prometheus` | 9090 | Scrape les métriques `model` et `backend` |
+| `grafana` | 3001 | Dashboard provisionné depuis Prometheus |
+
+---
+
+## 🚀 Démarrage en 3 commandes
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements-dev.txt
 docker compose up --build
 ```
 
-> 🧰 **Avec `uv`** : `uv venv && source .venv/bin/activate` puis
+> 🧰 **Avec `uv`** : remplacez les 2 premières commandes par `uv venv` puis
 > **`uv pip install -r requirements-dev.txt`**.
 > ⚠️ Un venv créé par `uv venv` **n'embarque pas `pip`** : si vous voyez
 > `No module named pip`, c'est ça — utilisez `uv pip install`, pas `pip install`.
@@ -114,8 +136,19 @@ docker compose up --build
 > ⚠️ **Ports hôte** : frontend **8088** (pas 8080), Grafana **3001** (pas 3000)
 > — pour éviter les conflits courants. Model 8000, backend 8001, Prometheus 9090.
 
-Au départ, seuls `model`, `prometheus` et `grafana` démarrent : à vous
-d'ajouter `backend` + `frontend` et de compléter le reste (cf. TODO).
+Une fois le compose démarré, ouvrez :
+
+- Frontend : <http://localhost:8088>
+- Backend : <http://localhost:8001/health>
+- Model : <http://localhost:8000/health>
+- Prometheus : <http://localhost:9090>
+- Grafana : <http://localhost:3001> (`admin` / `admin`)
+
+Contrôle rapide optionnel :
+
+```powershell
+.venv\Scripts\python -m pytest
+```
 
 ---
 
