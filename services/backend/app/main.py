@@ -12,8 +12,17 @@ from __future__ import annotations
 
 import os
 
-from fastapi import FastAPI, Request
+import httpx
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    CollectorRegistry,
+    Counter,
+    disable_created_metrics,
+    generate_latest,
+)
+from pydantic import ValidationError
 
 from app.middleware import LoggingMiddleware
 from app.schemas import HealthResponse, LoanApplication, Prediction
@@ -31,9 +40,27 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-Request-ID"],
 )
 
-# TODO 1 — exposer /metrics avec prometheus-fastapi-instrumentator
-#   (cf. service model). Pensez à une métrique métier : compteur d'erreurs
-#   upstream lors de l'appel au model.
+
+# Expose les erreurs cumulées lors de l'appel au model upstream via /metrics
+disable_created_metrics()
+metrics_registry = CollectorRegistry()
+backend_upstream_errors_total = Counter(
+    "backend_upstream_errors_total",
+    "Nombre d'erreurs rencontrées lors de l'appel au service model upstream depuis le backend.",
+    labelnames=("kind",),
+    registry=metrics_registry,
+)
+backend_upstream_errors_total.labels(kind="unavailable")
+backend_upstream_errors_total.labels(kind="bad_response")
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics() -> Response:
+    """Expose uniquement le compteur des erreurs du service model upstream."""
+    return Response(
+        content=generate_latest(metrics_registry),
+        media_type=CONTENT_TYPE_LATEST,
+    )
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -42,13 +69,38 @@ async def health() -> HealthResponse:
     return HealthResponse(status="ok")
 
 
-# TODO 2 — route POST /score :
-#   - reçoit une LoanApplication (validée par Pydantic),
-#   - appelle MODEL_URL/predict en interne (httpx async),
-#   - propage le header X-Request-ID,
-#   - gère les erreurs : model injoignable → 503, model en erreur → 502,
-#   - retourne un objet Prediction.
-#
-# @app.post("/score", response_model=Prediction)
-# async def score(application: LoanApplication, request: Request) -> Prediction:
-#     ...
+@app.post("/score", response_model=Prediction)
+async def score(application: LoanApplication, request: Request) -> Prediction:
+    """Appelle le service model et comptabilise ses erreurs upstream."""
+    request_id = getattr(request.state, "request_id", "n/a")
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{MODEL_URL}/predict",
+                json=application.model_dump(),
+                headers={"X-Request-ID": request_id},
+                timeout=5.0,
+            )
+    except httpx.RequestError as exc:
+        backend_upstream_errors_total.labels(kind="unavailable").inc()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Model service unavailable",
+        ) from exc
+
+    if response.is_error:
+        backend_upstream_errors_total.labels(kind="bad_response").inc()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Model service returned an error",
+        )
+
+    try:
+        return Prediction.model_validate(response.json())
+    except (ValueError, ValidationError) as exc:
+        backend_upstream_errors_total.labels(kind="bad_response").inc()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Invalid response from model service",
+        ) from exc
