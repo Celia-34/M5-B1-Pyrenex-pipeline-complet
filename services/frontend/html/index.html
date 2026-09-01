@@ -15,14 +15,110 @@
 </head>
 <body>
   <h1>Pyrenex Crédit — Évaluation du risque de défaut</h1>
-
-  <!-- TODO 1 — construire le formulaire avec les 14 champs de LoanApplication
-       (cf. services/*/app/schemas.py) : loan_amnt, int_rate, installment,
-       annual_inc, dti, delinq_2yrs, fico_range_low, revol_util (numériques)
-       + term, grade, home_ownership, verification_status, purpose, emp_length. -->
   <form id="scoreForm">
-    <!-- … champs à compléter … -->
+    <fieldset>
+      <legend>Caractéristiques du prêt</legend>
+
+      <label for="loan_amnt">Montant demandé (USD)</label>
+      <input id="loan_amnt" name="loan_amnt" data-type="number" type="number" required>
+
+      <label for="int_rate">Taux d'intérêt (%)</label>
+      <input id="int_rate" name="int_rate" data-type="number" type="number" required>
+
+      <label for="installment">Mensualité (USD)</label>
+      <input id="installment" name="installment" data-type="number" type="number" required>
+
+      <label for="term">Durée du prêt</label>
+      <select id="term" name="term" required>
+        <option value="" disabled selected>— Sélectionner —</option>
+        <option value="36 months">36 mois</option>
+        <option value="60 months">60 mois</option>
+      </select>
+
+      <label for="purpose">Objet du financement</label>
+      <select id="purpose" name="purpose" required>
+        <option value="" disabled selected>— Sélectionner —</option>
+        <option value="debt_consolidation">Regroupement de crédits</option>
+        <option value="credit_card">Rachat de carte de crédit</option>
+        <option value="home_improvement">Travaux</option>
+        <option value="major_purchase">Achat important</option>
+        <option value="medical">Frais médicaux</option>
+        <option value="small_business">Activité professionnelle</option>
+        <option value="car">Véhicule</option>
+        <option value="other">Autre</option>
+      </select>
+    </fieldset>
+
+    <fieldset>
+      <legend>Situation financière</legend>
+
+      <label for="annual_inc">Revenu annuel (USD)</label>
+      <input id="annual_inc" name="annual_inc" data-type="number" type="number" required>
+
+      <label for="dti">Taux d'endettement (DTI)</label>
+      <input id="dti" name="dti" data-type="number" type="number" required>
+
+      <label for="delinq_2yrs">Incidents de paiement sur 24 mois</label>
+      <input id="delinq_2yrs" name="delinq_2yrs" data-type="number" type="number" required>
+
+      <label for="fico_range_low">Score FICO (borne basse)</label>
+      <input id="fico_range_low" name="fico_range_low" data-type="number" type="number" required>
+
+      <label for="revol_util">Utilisation du crédit renouvelable (%)</label>
+      <input id="revol_util" name="revol_util" data-type="number" type="number" required>
+    </fieldset>
+
+    <fieldset>
+      <legend>Profil emprunteur</legend>
+
+      <label for="grade">Grade interne</label>
+      <select id="grade" name="grade" required>
+        <option value="" disabled selected>— Sélectionner —</option>
+        <option value="A">A</option>
+        <option value="B">B</option>
+        <option value="C">C</option>
+        <option value="D">D</option>
+        <option value="E">E</option>
+        <option value="F">F</option>
+        <option value="G">G</option>
+      </select>
+
+      <label for="home_ownership">Statut du logement</label>
+      <select id="home_ownership" name="home_ownership" required>
+        <option value="" disabled selected>— Sélectionner —</option>
+        <option value="MORTGAGE">Crédit immobilier en cours</option>
+        <option value="RENT">Locataire</option>
+        <option value="OWN">Propriétaire</option>
+        <option value="OTHER">Autre</option>
+      </select>
+
+      <label for="verification_status">Vérification des revenus</label>
+      <select id="verification_status" name="verification_status" required>
+        <option value="" disabled selected>— Sélectionner —</option>
+        <option value="Not Verified">Non vérifiés</option>
+        <option value="Source Verified">Source vérifiée</option>
+        <option value="Verified">Vérifiés</option>
+      </select>
+
+      <label for="emp_length">Ancienneté professionnelle</label>
+      <select id="emp_length" name="emp_length" required>
+        <option value="" disabled selected>— Sélectionner —</option>
+        <option value="&lt; 1 year">Moins d'un an</option>
+        <option value="1 year">1 an</option>
+        <option value="2 years">2 ans</option>
+        <option value="3 years">3 ans</option>
+        <option value="4 years">4 ans</option>
+        <option value="5 years">5 ans</option>
+        <option value="6 years">6 ans</option>
+        <option value="7 years">7 ans</option>
+        <option value="8 years">8 ans</option>
+        <option value="9 years">9 ans</option>
+        <option value="10+ years">10 ans ou plus</option>
+      </select>
+    </fieldset>
+
     <button type="submit">Évaluer le risque</button>
+    <button type="button" id="fillExample">Remplir un exemple</button>
   </form>
 
   <div id="result"></div>
@@ -30,12 +126,97 @@
   <script>
     const form = document.getElementById('scoreForm');
     const result = document.getElementById('result');
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    const esc = (s) => String(s).replace(/[&<>"']/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function show(html, cls) {
+      result.className = cls || '';
+      result.innerHTML = html;
+      result.style.display = 'block';
+    }
+    function buildPayload(f) {
+      const payload = {};
+      for (const field of f.elements) {
+        if (!field.name) continue;
+        if (field.dataset.type === 'number') {
+          payload[field.name] = field.value.trim() === '' ? NaN : Number(field.value);
+        } else {
+          payload[field.name] = field.value;
+        }
+      }
+      return payload;
+    }
+
+    function formatValidationError(detail) {
+      if (!Array.isArray(detail)) return `<li>${esc(detail ?? 'Saisie invalide.')}</li>`;
+      return detail
+        .map((e) => `<li><code>${esc((e.loc || []).slice(-1)[0])}</code> — ${esc(e.msg)}</li>`)
+        .join('');
+    }
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      // TODO 2 — construire le payload JSON depuis le formulaire
-      //   (penser à convertir les champs numériques en Number).
-      // TODO 3 — POST vers /api/score (même origine grâce au proxy nginx),
-      //   afficher prediction + probability, gérer les erreurs.
+      submitBtn.disabled = true;
+      show('Évaluation en cours…');
+
+      try {
+        const resp = await fetch('/api/score', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildPayload(form)),
+        });
+
+        const body = await resp.json().catch(() => ({}));
+
+        if (resp.ok) {
+          const defaut = body.prediction === 1;
+          const pct = (body.probability * 100).toFixed(1);
+          show(`
+            <strong>${defaut ? 'Risque de défaut élevé' : 'Risque de défaut faible'}</strong>
+            <p>Probabilité de défaut estimée : <strong>${esc(pct)} %</strong></p>
+            <p style="font-size:.8rem;opacity:.7">
+              modèle ${esc(body.model_version)} · requête <code>${esc(body.request_id)}</code>
+            </p>`, defaut ? 'ko' : 'ok');
+
+        } else if (resp.status === 422) {
+          show(`<strong>Saisie invalide</strong><ul>${formatValidationError(body.detail)}</ul>`, 'ko');
+
+        } else if (resp.status === 503) {
+          show(`<strong>Service de scoring indisponible</strong>
+                <p>Le moteur de scoring ne répond pas. Réessayez dans quelques instants.</p>`, 'ko');
+
+        } else if (resp.status === 502) {
+          show(`<strong>Erreur du moteur de scoring</strong>
+                <p>La demande n'a pas pu être évaluée. L'incident est enregistré.</p>`, 'ko');
+
+        } else {
+          show(`<strong>Erreur ${resp.status}</strong>
+                <p>${esc(body.detail || 'Réponse inattendue du service.')}</p>`, 'ko');
+        }
+
+      } catch (err) {
+        show(`<strong>Service injoignable</strong>
+              <p>Impossible de contacter le service. Vérifiez que la stack est démarrée.</p>`, 'ko');
+
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    document.getElementById('fillExample').addEventListener('click', () => {
+      const example = {
+        loan_amnt: 10000, int_rate: 13.5, installment: 340, annual_inc: 55000,
+        dti: 18.2, delinq_2yrs: 0, fico_range_low: 690, revol_util: 42.5,
+        term: '36 months', grade: 'B', home_ownership: 'MORTGAGE',
+        verification_status: 'Not Verified', purpose: 'debt_consolidation',
+        emp_length: '10+ years',
+      };
+      for (const [name, value] of Object.entries(example)) {
+        const field = form.elements[name];
+        if (field) field.value = value;
+      }
     });
   </script>
 </body>
