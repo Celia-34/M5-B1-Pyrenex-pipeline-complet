@@ -28,6 +28,9 @@ jobs:
       - name: Tests unitaires frontend
         run: |
           pytest -v services/frontend/tests
+      - name: Tests unitaires evaluation
+        run: |
+          pytest -v tests
 
   evaluate-model: # Verifie la performance du model
     needs: test 
@@ -49,7 +52,7 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
-    strategy:
+    strategy: # fix dependencies between jobs model and backend on python dependency
       max-parallel: 1 # Un seul push a la fois
       matrix:
         service: [model, backend, frontend]
