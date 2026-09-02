@@ -2,13 +2,13 @@ name: CI/CD Pyrenex Prod
 
 on:
   push:
-    branches: [main]
+    branches: [main, M5-B2-celia]
     tags: ["v*"]
   pull_request:
     branches: [main]
 
 jobs:
-  test:
+  test: # Vérifie qu'il n'y a pas de régressions dans le code via les tests unitaires
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,13 +29,20 @@ jobs:
         run: |
           pytest -v services/frontend/tests
 
-  # TODO 1 (M5-B2) — job `evaluate-model` :
-  #   needs: test ; lance `python scripts/evaluate_model.py --release-tag <ref>`
-  #   qui DOIT bloquer (exit≠0) si une métrique passe sous les seuils.
-  #   Uploadez mlruns/ en artefact.
+  evaluate-model: # Verifie la performance du model
+    needs: test 
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Evaluate model
+        run: |
+          python scripts/evaluate_model.py --release-tag "${{ github.ref_name }}"
   
   build-and-push:
-    needs: [test]
+    needs: [test, evaluate-model]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
