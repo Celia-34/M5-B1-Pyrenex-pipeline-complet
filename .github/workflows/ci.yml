@@ -42,11 +42,17 @@ jobs:
           python-version: "3.11"
       - name: Install deps
         run: |
-          pip install -r services/model/requirements.txt pytest httpx joblib mlflow
+          pip install -r services/model/requirements.txt pytest httpx joblib 
       - name: Evaluate model
         run: |
           python scripts/evaluate_model.py --release-tag "${{ github.ref_name }}"
-  
+      - name: Alerte Discord si dégradation du modèle
+        if: failure()
+        run: |
+          curl -sf -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"🚨 **evaluate-model** a échoué sur \`${{ github.ref_name }}\` (run : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}"
+
   build-and-push:
     needs: [test, evaluate-model]
     if: github.event_name == 'push'
