@@ -47,7 +47,11 @@ REFERENCE_BASELINE = ROOT / "data" / "reference_baseline.json"
 #   cf. mini-cours 08) et prenez au moins 2 σ. Sous le bruit, le garde-fou se
 #   déclenche sur du hasard et vous perdez confiance en lui.
 THRESHOLDS: dict[str, dict[str, float]] = {
-    # "f1_macro": {"absolute_min": ..., "max_drop_vs_baseline": ...},
+    "f1_macro": {"absolute_min": 0.50, "max_drop_vs_baseline": 0.05},
+    "f1_default": {"absolute_min": 0.30, "max_drop_vs_baseline": 0.08},
+    "roc_auc": {"absolute_min": 0.65, "max_drop_vs_baseline": 0.04},
+    # tolérance plus large : ~90 défauts dans le jeu de référence → recall bruité
+    "recall_default": {"absolute_min": 0.50, "max_drop_vs_baseline": 0.10},
 }
 
 
