@@ -42,7 +42,7 @@ jobs:
           python-version: "3.11"
       - name: Install deps
         run: |
-          pip install -r services/model/requirements.txt pytest httpx joblib 
+          pip install -r services/model/requirements.txt pytest httpx joblib mlflow
       - name: Evaluate model
         run: |
           python scripts/evaluate_model.py --release-tag "${{ github.ref_name }}"
