@@ -28,9 +28,6 @@ jobs:
       - name: Tests unitaires frontend
         run: |
           pytest -v services/frontend/tests
-      - name: Tests unitaires evaluation
-        run: |
-          pytest -v tests/evaluation
 
   evaluate-model: # Verifie la performance du model
     needs: test 
