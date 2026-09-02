@@ -33,53 +33,84 @@ from pathlib import Path
 import joblib
 import mlflow
 import pandas as pd
+from sklearn.metrics import f1_score, recall_score, roc_auc_score
 
 ROOT = Path(__file__).parent.parent
 MODELS_DIR = ROOT / "services" / "model" / "models"
 REFERENCE_SET = ROOT / "data" / "reference_set.csv"
 REFERENCE_BASELINE = ROOT / "data" / "reference_baseline.json"
 
-# TODO 1 — définir vos seuils (stratégie absolu / relatif / hybride).
 #   Documentez-les ET justifiez-les dans evaluation_thresholds.md.
 #   ⚠️ Une tolérance relative n'a de sens que si elle est **plus grande que le
 #   bruit de mesure** de votre jeu de référence. Mesurez ce bruit (bootstrap,
 #   cf. mini-cours 08) et prenez au moins 2 σ. Sous le bruit, le garde-fou se
 #   déclenche sur du hasard et vous perdez confiance en lui.
 THRESHOLDS: dict[str, dict[str, float]] = {
-    # "f1_macro": {"absolute_min": ..., "max_drop_vs_baseline": ...},
+    "f1_macro": {"absolute_min": 0.50, "max_drop_vs_baseline": 0.05},
+    "f1_default": {"absolute_min": 0.30, "max_drop_vs_baseline": 0.08},
+    "roc_auc": {"absolute_min": 0.65, "max_drop_vs_baseline": 0.04},
+    # tolérance plus large : ~90 défauts dans le jeu de référence → recall bruité
+    "recall_default": {"absolute_min": 0.50, "max_drop_vs_baseline": 0.10},
 }
 
 
 def compute_metrics(model, df: pd.DataFrame, meta: dict) -> dict[str, float]:
     """Calcule les métriques cibles sur le jeu de référence."""
-    # TODO 2 — construire X (feature_columns_*) et y (target + target_mapping),
-    #   prédire, et calculer f1_macro / f1_default / roc_auc / recall_default.
-    raise NotImplementedError
+    feature_columns = meta["feature_columns_numeric"] + meta["feature_columns_categorical"]
+    X = df[feature_columns]
+    y = df[meta["target_column"]].map(meta["target_mapping"])
+
+    y_pred = model.predict(X)
+    y_proba = model.predict_proba(X)[:, 1]
+
+    return {
+        "f1_macro": f1_score(y, y_pred, average="macro"),
+        "f1_default": f1_score(y, y_pred, pos_label=1),
+        "roc_auc": roc_auc_score(y, y_proba),
+        "recall_default": recall_score(y, y_pred, pos_label=1),
+    }
 
 
 def check_thresholds(metrics: dict[str, float], baseline: dict) -> list[str]:
     """Retourne la liste des violations de seuil (vide = release OK)."""
-    # TODO 3 — comparer chaque métrique à son plancher absolu ET à la baisse
-    #   max tolérée vs baseline. Retourner les messages de violation.
-    raise NotImplementedError
+    violations = []
+    for name, cfg in THRESHOLDS.items():
+        value = metrics[name]
+        if value < cfg["absolute_min"]:
+            violations.append(
+                f"{name}={value:.4f} < plancher absolu {cfg['absolute_min']:.4f}"
+            )
+        drop = baseline[name] - value
+        if drop > cfg["max_drop_vs_baseline"]:
+            violations.append(
+                f"{name}={value:.4f} : baisse de {drop:.4f} vs golden run "
+                f"{baseline[name]:.4f} > tolérance {cfg['max_drop_vs_baseline']:.4f}"
+            )
+    return violations
 
 
 def load_baseline() -> dict:
     """Charge le golden run (baseline mesurée sur le jeu de référence)."""
-    # TODO 3bis — lire REFERENCE_BASELINE et renvoyer ses métriques.
-    #   Si le fichier n'existe pas : lever une erreur explicite qui dit de
-    #   lancer `--freeze-baseline`. Surtout **pas** de repli silencieux sur
-    #   `meta["metrics_holdout"]` : ce serait comparer deux populations.
-    raise NotImplementedError
+    if not REFERENCE_BASELINE.exists():
+        raise SystemExit(
+            f"{REFERENCE_BASELINE} est absent.\n"
+            "Le golden run n'a pas encore été gelé : lancez d'abord "
+            "`python scripts/evaluate_model.py --freeze-baseline`."
+        )
+    return json.loads(REFERENCE_BASELINE.read_text(encoding="utf-8"))
 
 
 def freeze_baseline(model, df: pd.DataFrame, meta: dict) -> dict:
     """Mesure et gèle le golden run sur le jeu de référence."""
-    # TODO 3ter — calculer les métriques sur le jeu de référence et les écrire
-    #   dans REFERENCE_BASELINE (avec model_version, reference_set,
-    #   n_reference). Ce fichier est **versionné** : c'est lui qui arbitre les
-    #   releases. À regeler seulement si le jeu OU le modèle de référence change.
-    raise NotImplementedError
+    metrics = compute_metrics(model, df, meta)
+    baseline = {
+        "model_version": meta["model_version"],
+        "reference_set": str(REFERENCE_SET.relative_to(ROOT)),
+        "n_reference": len(df),
+        **metrics,
+    }
+    REFERENCE_BASELINE.write_text(json.dumps(baseline, indent=2), encoding="utf-8")
+    return baseline
 
 
 def load_reference_set() -> pd.DataFrame:
@@ -126,9 +157,11 @@ def main() -> int:
         return 0
 
     if args.degrade:
-        # TODO 4 — simuler un bug de preprocessing réaliste (ex. désaligner
-        #   X et y) pour PROUVER que le rouge bloque bien la release.
-        pass
+        # simule un bug de preprocessing réaliste : la cible se désaligne des
+        # features (ex. jointure décalée), sans toucher au modèle.
+        target_column = meta["target_column"]
+        df = df.copy()
+        df[target_column] = df[target_column].sample(frac=1, random_state=0).to_numpy()
 
     metrics = compute_metrics(model, df, meta)
     baseline = load_baseline()  # ← le golden run, PAS metrics_holdout
@@ -141,7 +174,8 @@ def main() -> int:
             {
                 "model_version": meta["model_version"],
                 "release_tag": args.release_tag,
-                # TODO 5 — ajouter reference_set, n_reference…
+                "reference_set": str(REFERENCE_SET.relative_to(ROOT)),
+                "n_reference": len(df),
             }
         )
         mlflow.log_metrics(metrics)  # ← les 4 métriques tracées
