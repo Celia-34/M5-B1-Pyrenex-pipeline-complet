@@ -148,8 +148,8 @@ def main() -> int:
     parser.add_argument("--freeze-baseline", action="store_true")
     args = parser.parse_args()
 
-    model = joblib.load(MODELS_DIR / "pyrenex_risk_v2.joblib")
-    meta = json.loads((MODELS_DIR / "pyrenex_risk_v2.json").read_text(encoding="utf-8"))
+    model = joblib.load(MODELS_DIR / "pyrenex_risk_v2_balanced.joblib")
+    meta = json.loads((MODELS_DIR / "pyrenex_risk_v2_balanced.json").read_text(encoding="utf-8"))
     df = load_reference_set()
 
     if args.freeze_baseline:
