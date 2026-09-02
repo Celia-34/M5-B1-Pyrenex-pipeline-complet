@@ -28,6 +28,9 @@ jobs:
       - name: Tests unitaires frontend
         run: |
           pytest -v services/frontend/tests
+      - name: Tests unitaires evaluation
+        run: |
+          pytest -v tests/evaluation
 
   evaluate-model: # Verifie la performance du model
     needs: test 
@@ -37,6 +40,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Install deps
+        run: |
+          pip install -r services/model/requirements.txt pytest httpx joblib
       - name: Evaluate model
         run: |
           python scripts/evaluate_model.py --release-tag "${{ github.ref_name }}"
