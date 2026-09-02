@@ -102,19 +102,17 @@ def test_health_ok(client: TestClient) -> None:
     assert response.headers["X-Request-ID"]
 
 
-def test_metrics_exposes_only_backend_counters(client: TestClient) -> None:
+def test_metrics_exposes_backend_and_http_counters(client: TestClient) -> None:
     response = client.get("/metrics")
 
     assert response.status_code == 200
     samples = [line for line in response.text.splitlines() if line and not line.startswith("#")]
     assert samples
-    assert all(
-        line.startswith(("backend_upstream_errors_total{", "backend_score_calls_total "))
-        for line in samples
-    )
+
     assert any('kind="unavailable"' in line for line in samples)
     assert any('kind="bad_response"' in line for line in samples)
     assert any(line.startswith("backend_score_calls_total ") for line in samples)
+    assert any(line.startswith("http_request_duration_seconds_bucket{") for line in samples)
 
 
 def test_score_returns_prediction_and_propagates_request_id(
