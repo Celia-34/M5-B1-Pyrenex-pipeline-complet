@@ -33,6 +33,7 @@ from pathlib import Path
 import joblib
 import mlflow
 import pandas as pd
+from sklearn.metrics import f1_score, recall_score, roc_auc_score
 
 ROOT = Path(__file__).parent.parent
 MODELS_DIR = ROOT / "services" / "model" / "models"
@@ -52,9 +53,19 @@ THRESHOLDS: dict[str, dict[str, float]] = {
 
 def compute_metrics(model, df: pd.DataFrame, meta: dict) -> dict[str, float]:
     """Calcule les métriques cibles sur le jeu de référence."""
-    # TODO 2 — construire X (feature_columns_*) et y (target + target_mapping),
-    #   prédire, et calculer f1_macro / f1_default / roc_auc / recall_default.
-    raise NotImplementedError
+    feature_columns = meta["feature_columns_numeric"] + meta["feature_columns_categorical"]
+    X = df[feature_columns]
+    y = df[meta["target_column"]].map(meta["target_mapping"])
+
+    y_pred = model.predict(X)
+    y_proba = model.predict_proba(X)[:, 1]
+
+    return {
+        "f1_macro": f1_score(y, y_pred, average="macro"),
+        "f1_default": f1_score(y, y_pred, pos_label=1),
+        "roc_auc": roc_auc_score(y, y_proba),
+        "recall_default": recall_score(y, y_pred, pos_label=1),
+    }
 
 
 def check_thresholds(metrics: dict[str, float], baseline: dict) -> list[str]:
@@ -75,11 +86,15 @@ def load_baseline() -> dict:
 
 def freeze_baseline(model, df: pd.DataFrame, meta: dict) -> dict:
     """Mesure et gèle le golden run sur le jeu de référence."""
-    # TODO 3ter — calculer les métriques sur le jeu de référence et les écrire
-    #   dans REFERENCE_BASELINE (avec model_version, reference_set,
-    #   n_reference). Ce fichier est **versionné** : c'est lui qui arbitre les
-    #   releases. À regeler seulement si le jeu OU le modèle de référence change.
-    raise NotImplementedError
+    metrics = compute_metrics(model, df, meta)
+    baseline = {
+        "model_version": meta["model_version"],
+        "reference_set": str(REFERENCE_SET.relative_to(ROOT)),
+        "n_reference": len(df),
+        **metrics,
+    }
+    REFERENCE_BASELINE.write_text(json.dumps(baseline, indent=2), encoding="utf-8")
+    return baseline
 
 
 def load_reference_set() -> pd.DataFrame:

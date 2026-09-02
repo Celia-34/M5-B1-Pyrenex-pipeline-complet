@@ -6,6 +6,8 @@
 Stratégie retenue (absolu / relatif / **hybride**) : _à choisir et justifier_.
 Jeu de référence : `data/reference_set.csv` (sous-échantillon figé du holdout M1).
 
+**Point de vigilance:** le jeu de référence (golden run) est un sous échantillon de 500 lignes représentatif de la distribution des classes en production avec 18% de défauts. L'objectif est double : avoir une référence de la performance du modèle mais également des données. Si le taux de défauts venait à varier dans les données de production, cela serait détecté.
+
 ## Deux baselines, à ne pas confondre
 
 | | Mesurée sur | Sert à |
