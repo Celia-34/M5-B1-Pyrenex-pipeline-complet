@@ -101,17 +101,27 @@
       },
       "targets": [
         {
-          "expr": "rate(http_requests_total[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"model\"}[1m]))",
           "refId": "A",
-          "legendFormat": "RPS"
+          "legendFormat": "RPS Model"
         },
         {
-          "expr": "rate(http_requests_total{status=~\"5..\"}[1m])",
+          "expr": "sum(rate(http_requests_total{job=\"backend\"}[1m]))",
           "refId": "B",
-          "legendFormat": "Erreurs/sec"
+          "legendFormat": "RPS Backend"
+        },
+        {
+          "expr": "sum(rate(http_requests_total{job=\"model\",status=~\"5..\"}[1m]))",
+          "refId": "C",
+          "legendFormat": "Erreurs Model"
+        },
+        {
+          "expr": "sum(rate(backend_upstream_errors_total{job=\"backend\",kind=~\"5..\"}[1m]))",
+          "refId": "D",
+          "legendFormat": "Erreurs Backend"
         }
       ],
-      "title": "📊 VIE - RPS & Erreurs",
+      "title": "📊 VIE - RPS & Erreurs (par service)",
       "type": "timeseries"
     },
     {
@@ -190,22 +200,37 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"model\"}[5m])) by (le))",
           "refId": "A",
-          "legendFormat": "P50"
+          "legendFormat": "P50 Model"
         },
         {
-          "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"model\"}[5m])) by (le))",
           "refId": "B",
-          "legendFormat": "P95"
+          "legendFormat": "P95 Model"
         },
         {
-          "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))",
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"model\"}[5m])) by (le))",
           "refId": "C",
-          "legendFormat": "P99"
+          "legendFormat": "P99 Model"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"backend\"}[5m])) by (le))",
+          "refId": "D",
+          "legendFormat": "P50 Backend"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"backend\"}[5m])) by (le))",
+          "refId": "E",
+          "legendFormat": "P95 Backend"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"backend\"}[5m])) by (le))",
+          "refId": "F",
+          "legendFormat": "P99 Backend"
         }
       ],
-      "title": "⚡ VITESSE - Latence P50/P95/P99",
+      "title": "⚡ VITESSE - Latence P50/P95/P99 (par service)",
       "type": "timeseries"
     },
     {
@@ -393,6 +418,162 @@
       ],
       "title": "📈 COMPORTEMENT - Histogramme Prédictions",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Statut du service model - UP (1) ou DOWN (0)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "expr": "up{job=\"model\"}",
+          "refId": "A",
+          "legendFormat": "Model Status"
+        }
+      ],
+      "title": "🤖 SERVICE MODEL - Status",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Statut du service backend - UP (1) ou DOWN (0)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 1,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 0,
+                  "text": "UP"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "text": {},
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "expr": "up{job=\"backend\"}",
+          "refId": "A",
+          "legendFormat": "Backend Status"
+        }
+      ],
+      "title": "🌐 SERVICE BACKEND - Status",
+      "type": "stat"
     }
   ],
   "refresh": "30s",

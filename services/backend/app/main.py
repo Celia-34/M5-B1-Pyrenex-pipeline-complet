@@ -13,15 +13,10 @@ from __future__ import annotations
 import os
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from prometheus_client import (
-    CONTENT_TYPE_LATEST,
-    CollectorRegistry,
-    Counter,
-    disable_created_metrics,
-    generate_latest,
-)
+from prometheus_client import Counter, disable_created_metrics
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import ValidationError
 
 from app.middleware import LoggingMiddleware
@@ -40,32 +35,24 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-Request-ID"],
 )
 
+# Expose http_requests_total / http_request_duration_seconds (mêmes métriques que le model)
+Instrumentator(should_group_status_codes=False).instrument(app).expose(
+    app, endpoint="/metrics", include_in_schema=False
+)
 
-# Expose les erreurs cumulées lors de l'appel au model upstream via /metrics
+# Expose les erreurs cumulées lors de l'appel au model upstream, sur le même /metrics
 disable_created_metrics()
-metrics_registry = CollectorRegistry()
 backend_upstream_errors_total = Counter(
     "backend_upstream_errors_total",
     "Nombre d'erreurs rencontrées lors de l'appel au service model upstream depuis le backend.",
     labelnames=("kind",),
-    registry=metrics_registry,
 )
 backend_upstream_errors_total.labels(kind="unavailable")
 backend_upstream_errors_total.labels(kind="bad_response")
 backend_score_calls_total = Counter(
     "backend_score_calls_total",
     "Nombre total d'appels au endpoint /score.",
-    registry=metrics_registry,
 )
-
-
-@app.get("/metrics", include_in_schema=False)
-async def metrics() -> Response:
-    """Expose les compteurs d'appels et d'erreurs du backend."""
-    return Response(
-        content=generate_latest(metrics_registry),
-        media_type=CONTENT_TYPE_LATEST,
-    )
 
 
 @app.get("/health", response_model=HealthResponse)
