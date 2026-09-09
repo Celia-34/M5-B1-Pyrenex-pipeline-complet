@@ -1,95 +1,44 @@
 # M5-B1 + M5-B2 — Pyrenex Prod (architecture, CI/CD, monitoring, éval continue)
 
-> **Repo template GitHub.** Un·e des 2 du binôme clique **« Use this
-> template »** → `M5-B1-pyrenex-prod-<binome>`, puis ajoute l'autre comme
-> collaborateur. Vous partez du **scoring v2** (modèle M1 fourni) et vous le
-> mettez en **production complète** : 3 services orchestrés, CI/CD, monitoring
-> Grafana, runbook, puis (B2) évaluation continue + tracking MLflow.
+> **Date** : 2026-09-02
+> **Binôme M5-B1** : Tom & Célia
+> **M5-B2** : individuel (Célia, branche `M5-B2-celia`)
+
+## 📝 Résumé
+
+Ce repo met en **production** le modèle de scoring crédit Pyrenex (repris de
+M1) : 3 services orchestrés (`model` / `backend` / `frontend`), pipeline
+CI/CD GitHub Actions, monitoring Prometheus/Grafana et runbook d'astreinte
+(M5-B1), puis **évaluation continue** du modèle sur un jeu de référence figé
+avec tracking MLflow et garde-fou bloquant en CI (M5-B2).
 
 ---
 
-## 🧭 Votre brief en un coup d'œil
-
-**Ce README est votre document de pilotage unique** — tout ce qu'il faut faire,
-dans l'ordre, avec le bon appui. Les autres supports ont chacun un rôle précis :
-
-| Support | Rôle |
-|---|---|
-| **Simplonline** | Le contrat : contexte client, livrables, critères de performance |
-| **Ce README** | Le pilotage : quoi faire, quand, avec quel mini-cours |
-| [`ressources/`](./ressources/) | Les 8 mini-cours d'appui (index dans [`ressources/README.md`](./ressources/README.md)) |
-| **Discord `fil-M5`** | Annonces + questions |
-
-### M5-B1 — les 2 jours sync (binôme)
-
-> La numérotation des tâches est celle de l'énoncé Simplonline (1 → 12).
-> La tâche 4, c'est le déjeuner : elle compte aussi.
-
-| Quand | Tâche | Durée | Appui |
-|---|---|---|---|
-| Mardi 10h35 | 1. Tirage binôme + appropriation de la reprise M1 (modèle + API fournis) | 45 min | — |
-| Mardi 11h20 | 2. Architecture 3 services (`model` / `backend` / `frontend`) — 1ʳᵉ partie | 1h10 | [`01_Docker_compose`](./ressources/01_Docker_compose_multiservices_essentiel.md) |
-| Mardi 12h30 | 4. 🍽️ Déjeuner | 1h | — |
-| Mardi 13h30 | 2. Architecture 3 services — fin | 20 min | [`01_Docker_compose`](./ressources/01_Docker_compose_multiservices_essentiel.md) |
-| Mardi 13h50 | 3. Vérification `docker compose up` | 15 min | [`01_Docker_compose`](./ressources/01_Docker_compose_multiservices_essentiel.md) |
-| Mardi 14h05 | 5. Pipeline CI/CD GitHub Actions + *quality gate* (pause 15 min incluse) | 2h30 | [`03_GitHub_Actions`](./ressources/03_GitHub_Actions_CI_CD_essentiel.md) — appui [`06_Pair_coding`](./ressources/06_Pair_coding_sync_long_essentiel.md) |
-| Mardi 16h45 | 6. Mur réflexif intermédiaire | 15 min | — |
-| Mercredi 9h15 | 7. Endpoint `/metrics` + métriques métier | 30 min | [`02_FastAPI_metrics_Prometheus`](./ressources/02_FastAPI_metrics_Prometheus_essentiel.md) |
-| Mercredi 9h45 | 8. Prometheus + Grafana dans le compose | 30 min | [`02_FastAPI_metrics_Prometheus`](./ressources/02_FastAPI_metrics_Prometheus_essentiel.md) |
-| Mercredi 10h15 | 9. Dashboard Grafana custom (vie / vitesse / comportement) | 45 min | [`04_Grafana_dashboard`](./ressources/04_Grafana_dashboard_custom_essentiel.md) |
-| Mercredi 11h00 | 10. Runbook d'astreinte (4 procédures) | 30 min | [`05_Runbook_astreinte`](./ressources/05_Runbook_astreinte_essentiel.md) |
-| Mercredi 11h30 | 11. **Tour de table binômes** (démo compose + dashboard) | 1h | — |
-| Mercredi 12h30 | 12. Mur réflexif final M5-B1 + lancement M5-B2 | 30 min | — |
-
-> ⏱️ **Le jalon qui compte** : vos 3 services doivent démarrer **avant
-> d'attaquer la CI**. Si la tâche 3 n'est pas verte à 14h05, appelez —
-> la tâche 5 est la plus longue des deux jours, elle ne se rattrape pas.
-
-### M5-B2 — l'async individuel (jeudi + vendredi matin, 6 h)
-
-Vous repartez **chacun·e** du repo binôme, dans une branche perso
-`<prenom>/m5-b2-eval-continue`. Pas de nouveau repo.
-
-| Quand | Étape | Durée | Appui |
-|---|---|---|---|
-| Jeudi | 1. **Préparation du jeu de référence** — récupérer le holdout M1, en tirer **votre** `data/reference_set.csv` (~500 lignes), puis geler le golden run (`--freeze-baseline`) | 30 min | [`data/README.md`](./data/README.md) + [`08_Evaluation_continue_seuils`](./ressources/08_Evaluation_continue_seuils_essentiel.md) |
-| Jeudi | 2. `scripts/evaluate_model.py` + tracking **MLflow** (4 métriques, code retour 0 / non-zéro) | 1h30 | [`07_MLflow_tracking`](./ressources/07_MLflow_tracking_essentiel.md) + [`08`](./ressources/08_Evaluation_continue_seuils_essentiel.md) |
-| Jeudi | 3. Définition et **justification** des seuils (`evaluation_thresholds.md`) | 1h | [`08_Evaluation_continue_seuils`](./ressources/08_Evaluation_continue_seuils_essentiel.md) |
-| Vendredi | 4. Étape `evaluate-model` bloquante dans le workflow GitHub Actions | 1h | [`03_GitHub_Actions`](./ressources/03_GitHub_Actions_CI_CD_essentiel.md) |
-| Vendredi | 5. Tests pytest pour l'évaluation | 45 min | [`03_GitHub_Actions`](./ressources/03_GitHub_Actions_CI_CD_essentiel.md) |
-| Vendredi | 6. ⭐ Alerte Discord webhook (**bonus**) | 30 min | — |
-| Vendredi | 7. Doc + merge | 45 min | — |
-
-> ⚠️ **Le piège central de B2** : votre jeu de référence n'existe pas encore,
-> et le fichier `data/reference_set_TEMPLATE.csv` du repo n'en est **pas** un
-> (20 lignes = un exemple de format). C'est vous qui le construisez à partir du
-> holdout M1, et sa composition est une **décision à argumenter**.
-> Mode d'emploi : [`data/README.md`](./data/README.md).
-
-### ✅ Checklist livrables
+## ✅ Checklist livrables
 
 **M5-B1 — avant mercredi 12h30**
 
-- [ ] `docker compose up --build` démarre les **3 services** de façon **reproductible**, healthchecks verts
-- [ ] `/metrics` exposé côté `model` **et** `backend`
-- [ ] Dashboard Grafana provisionné **automatiquement** (3 panels : vie / vitesse / comportement)
-- [ ] Workflow CI **vert**, image poussée sur GHCR, tag `v1.0.0-prod`
-- [ ] Le **contract test** du modèle bloque la release s'il est rouge
+- [x] `docker compose up --build` démarre les **3 services** de façon **reproductible**, healthchecks verts
+- [x] `/metrics` exposé côté `model` **et** `backend`
+- [x] Dashboard Grafana provisionné **automatiquement** (3 panels : vie / vitesse / comportement)
+- [x] Workflow CI **vert**, image poussée sur GHCR, tag `v1.0.0-prod`
+- [x] Le **contract test** du modèle bloque la release s'il est rouge
       *(il vérifie le **contrat technique** de l'API — pas la performance du
       modèle : ça, c'est l'évaluation continue de B2)*
-- [ ] `runbook.md` — 4 procédures (Service KO / Latence / Métrique modèle / Rollback)
-- [ ] `README.md` — schéma Mermaid de l'archi + démarrage en 3 commandes
-- [ ] Commits binôme : `Co-authored-by:` ou auteurs nominatifs
+- [x] `runbook.md` — 4 procédures (Service KO / Latence / Métrique modèle / Rollback)
+- [x] `README.md` — schéma Mermaid de l'archi + démarrage en 3 commandes
+- [x] Commits binôme : `Co-authored-by:` ou auteurs nominatifs
 
 **M5-B2 — avant vendredi 17h**
 
-- [ ] `data/reference_set.csv` (~500 lignes) **construit par vous** depuis le holdout M1, figé, versionné
-- [ ] `data/reference_baseline.json` — le golden run, gelé sur **ce** jeu
-- [ ] `scripts/evaluate_model.py` — 4 métriques, ≥ 2 runs MLflow comparables
-- [ ] `evaluation_thresholds.md` — 4 métriques × golden run / plancher absolu / baisse max / **justification**, tolérance relative ≥ 2 σ (bootstrap)
-- [ ] Étape `evaluate-model` dans la CI : `--degrade` fait **échouer** la release
+- [x] `data/reference_set.csv` (~500 lignes) **construit par vous** depuis le holdout M1, figé, versionné
+- [x] `data/reference_baseline.json` — le golden run, gelé sur **ce** jeu
+- [x] `scripts/evaluate_model.py` — 4 métriques, ≥ 2 runs MLflow comparables
+- [x] `evaluation_thresholds.md` — 4 métriques × golden run / plancher absolu / baisse max / **justification**, tolérance relative ≥ 2 σ (bootstrap)
+- [x] Étape `evaluate-model` dans la CI : `--degrade` fait **échouer** la release
       *(`mlruns/` est gitignoré : la preuve passe par l'**artefact CI**, pas par un commit)*
-
+      
+      => Captures disponibles dans le **`notebook/notebook.ipynb`**
 ---
 
 ## 🏗️ Schéma d'architecture
@@ -117,6 +66,37 @@ flowchart LR
 | `model` | 8000 | API de scoring M1 : `/predict`, `/health`, `/metrics` |
 | `prometheus` | 9090 | Scrape les métriques `model` et `backend` |
 | `grafana` | 3001 | Dashboard provisionné depuis Prometheus |
+
+---
+
+## 📊 Évaluation continue
+
+À chaque release, `scripts/evaluate_model.py` recalcule 4 métriques
+(`f1_macro`, `f1_default`, `roc_auc`, `recall_default`) sur le jeu de
+référence figé `data/reference_set.csv` (500 lignes, sous-échantillon du
+holdout M1, 18% de défauts) et les compare au **golden run**
+(`data/reference_baseline.json`), pas à la baseline holdout communiquée en
+M1 — les deux jeux n'ont ni la même taille ni la même composition.
+
+- **Seuils** : stratégie hybride (plancher absolu + baisse max vs golden
+  run), dimensionnés par bootstrap (≥ 2σ de bruit mesuré) et justifiés dans
+  [`evaluation_thresholds.md`](./evaluation_thresholds.md) ;
+  visualisation dans [`notebook/thresholds.ipynb`](./notebook/thresholds.ipynb).
+- **Tracking** : chaque run est loggé dans MLflow (`mlflow ui`) avec
+  métriques, paramètres (`model_version`, `reference_set`, `n_reference`) et
+  tag `release_blocked`.
+- **Garde-fou CI** : le job `evaluate-model` du workflow
+  [`ci.yml`](./.github/workflows/ci.yml) exécute le script et **bloque la
+  release** (code retour non-zéro) en cas de dépassement de seuil — testé
+  via `--degrade` (désalignement volontaire X/y).
+- **Tests** : `tests/test_evaluation.py` couvre le calcul des métriques, la
+  comparaison aux seuils et le chargement/gel du golden run
+  (`.venv\Scripts\python.exe -m pytest tests`).
+
+```powershell
+python scripts/evaluate_model.py --freeze-baseline     # une fois, au gel du jeu
+python scripts/evaluate_model.py --release-tag v2.0.0
+```
 
 ---
 
@@ -156,24 +136,28 @@ Contrôle rapide optionnel :
 
 ```
 services/
-  model/        # FOURNI — API scoring M1-B2 + /metrics (ne pas réécrire)
-  backend/      # À COMPLÉTER — orchestrateur (tâche 2)
-  frontend/     # À COMPLÉTER — formulaire nginx (tâche 2)
-prometheus/     # FOURNI — scrape config
+  model/
+  backend/
+  frontend/
+prometheus/
 grafana/provisioning/
-  datasources/  # FOURNI — datasource Prometheus
-  dashboards/   # provider fourni ; le dashboard JSON = à vous (tâche 9)
-.github/workflows/ci.yml   # squelette (job test fourni) — tâche 5
-runbook.md                 # template 4 sections — tâche 10
-data/README.md                       # B2 — d'où vient votre jeu de référence
-data/reference_set_TEMPLATE.csv      # B2 — exemple de FORMAT (20 lignes), pas un jeu
-scripts/evaluate_model_TEMPLATE.py   # B2 — MLflow pré-câblé
-evaluation_thresholds_TEMPLATE.md    # B2 — seuils à justifier
-ressources/                # 📚 mini-cours d'appui (lecture juste-à-temps)
+  datasources/
+  dashboards/
+.github/workflows/ci.yml
+runbook.md
+data/
+  README.md
+  reference_set.csv
+  reference_baseline.json
+scripts/evaluate_model.py
+evaluation_thresholds.md
+notebook/thresholds.ipynb
+tests/test_evaluation.py
+ressources/
 ```
 
-> Le service `model` (déjà fourni) est votre **exemple de référence** : il
-> expose déjà `/metrics` — répliquez ce pattern sur le `backend`.
+> Le service `model` est l'**exemple de référence** : il expose déjà
+> `/metrics` — pattern répliqué sur le `backend`.
 
 ---
 
@@ -181,11 +165,3 @@ ressources/                # 📚 mini-cours d'appui (lecture juste-à-temps)
 
 Voir [`./ressources/`](./ressources/) — 8 mini-cours + `liens_officiels.md`.
 Lecture **juste-à-temps** : ouvrez le mini-cours de la tâche en cours.
-
----
-
-## 🆘 Bloqué·e·s ?
-
-1. Relisez le mini-cours de la tâche en cours (`ressources/`).
-2. Le service `model` est votre exemple qui marche : copiez ses patterns.
-3. 30 min sur un bloquant → Discord `fil-M5`.

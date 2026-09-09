@@ -2,13 +2,13 @@ name: CI/CD Pyrenex Prod
 
 on:
   push:
-    branches: [main]
+    branches: [main, M5-B2-celia]
     tags: ["v*"]
   pull_request:
     branches: [main]
 
 jobs:
-  test:
+  test: # Vérifie qu'il n'y a pas de régressions dans le code via les tests unitaires
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +18,7 @@ jobs:
       - name: Install deps
         run: |
           pip install -r services/model/requirements.txt pytest httpx
-          pip install -r services/backend/requirements.txt pytest httpx
+          pip install -r services/backend/requirements.txt pytest httpx mlflow
       - name: Tests unitaires model + contract test du modèle
         run: |
           pytest -v services/model/tests
@@ -28,18 +28,37 @@ jobs:
       - name: Tests unitaires frontend
         run: |
           pytest -v services/frontend/tests
+      - name: Tests unitaires evaluation
+        run: |
+          pytest -v tests
 
-  # TODO 1 (M5-B2) — job `evaluate-model` :
-  #   needs: test ; lance `python scripts/evaluate_model.py --release-tag <ref>`
-  #   qui DOIT bloquer (exit≠0) si une métrique passe sous les seuils.
-  #   Uploadez mlruns/ en artefact.
-  
+  evaluate-model: # Verifie la performance du model
+    needs: test 
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          pip install -r services/model/requirements.txt pytest httpx joblib mlflow
+      - name: Evaluate model
+        run: |
+          python scripts/evaluate_model.py --release-tag "${{ github.ref_name }}"
+      - name: Alerte Discord si dégradation du modèle
+        if: failure()
+        run: |
+          curl -sf -X POST "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"content\": \"🚨 **evaluate-model** a échoué sur \`${{ github.ref_name }}\` (run : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"}"
+
   build-and-push:
-    needs: [test]
+    needs: [test, evaluate-model]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
-    strategy:
+    strategy: # fix dependencies between jobs model and backend on python dependency
       max-parallel: 1 # Un seul push a la fois
       matrix:
         service: [model, backend, frontend]
