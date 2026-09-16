@@ -22,6 +22,9 @@ jobs:
       - name: Tests unitaires model + contract test du modèle
         run: |
           pytest -v services/model/tests
+      - name: Tests évaluation continue (M5-B2, tâche 5)
+        run: |
+          pytest -v tests/test_evaluate_model.py
       - name: Tests unitaires backend
         run: |
           pytest -v services/backend/tests
