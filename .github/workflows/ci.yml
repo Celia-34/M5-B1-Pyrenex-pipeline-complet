@@ -19,6 +19,7 @@ jobs:
         run: |
           pip install -r services/model/requirements.txt pytest httpx
           pip install -r services/backend/requirements.txt pytest httpx
+          pip install mlflow
       - name: Tests unitaires model + contract test du modèle
         run: |
           pytest -v services/model/tests
