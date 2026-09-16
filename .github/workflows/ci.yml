@@ -43,7 +43,7 @@ jobs:
           pip install mlflow
       - name: Évaluation continue (bloque la release si dégradation vs golden run)
         run: |
-          python scripts/evaluate_model.py --release-tag "${{ github.ref_name }}" --degrade
+          python scripts/evaluate_model.py --release-tag "${{ github.ref_name }}"
       - name: Upload mlruns (preuve de tracking MLflow)
         if: always()
         uses: actions/upload-artifact@v4
