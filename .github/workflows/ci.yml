@@ -2,7 +2,7 @@ name: CI/CD Pyrenex Prod
 
 on:
   push:
-    branches: [main]
+    branches: [main, Tom]
     tags: ["v*"]
   pull_request:
     branches: [main]
@@ -29,13 +29,31 @@ jobs:
         run: |
           pytest -v services/frontend/tests
 
-  # TODO 1 (M5-B2) — job `evaluate-model` :
-  #   needs: test ; lance `python scripts/evaluate_model.py --release-tag <ref>`
-  #   qui DOIT bloquer (exit≠0) si une métrique passe sous les seuils.
-  #   Uploadez mlruns/ en artefact.
+  evaluate-model:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          pip install -r services/model/requirements.txt
+          pip install mlflow
+      - name: Évaluation continue (bloque la release si dégradation vs golden run)
+        run: |
+          python scripts/evaluate_model.py --release-tag "${{ github.ref_name }}"
+      - name: Upload mlruns (preuve de tracking MLflow)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlruns-${{ github.run_id }}
+          path: mlruns/
+          retention-days: 14
   
   build-and-push:
-    needs: [test]
+    needs: [test, evaluate-model]
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions: { contents: read, packages: write }
