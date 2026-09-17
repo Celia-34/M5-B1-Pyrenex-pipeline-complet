@@ -2,7 +2,7 @@ name: CI/CD Pyrenex Prod
 
 on:
   push:
-    branches: [main, Tom]
+    branches: [main]
     tags: ["v*"]
   pull_request:
     branches: [main]
