@@ -1,95 +1,4 @@
 # M5-B1 + M5-B2 — Pyrenex Prod (architecture, CI/CD, monitoring, éval continue)
-
-> **Repo template GitHub.** Un·e des 2 du binôme clique **« Use this
-> template »** → `M5-B1-pyrenex-prod-<binome>`, puis ajoute l'autre comme
-> collaborateur. Vous partez du **scoring v2** (modèle M1 fourni) et vous le
-> mettez en **production complète** : 3 services orchestrés, CI/CD, monitoring
-> Grafana, runbook, puis (B2) évaluation continue + tracking MLflow.
-
----
-
-## 🧭 Votre brief en un coup d'œil
-
-**Ce README est votre document de pilotage unique** — tout ce qu'il faut faire,
-dans l'ordre, avec le bon appui. Les autres supports ont chacun un rôle précis :
-
-| Support | Rôle |
-|---|---|
-| **Simplonline** | Le contrat : contexte client, livrables, critères de performance |
-| **Ce README** | Le pilotage : quoi faire, quand, avec quel mini-cours |
-| [`ressources/`](./ressources/) | Les 8 mini-cours d'appui (index dans [`ressources/README.md`](./ressources/README.md)) |
-| **Discord `fil-M5`** | Annonces + questions |
-
-### M5-B1 — les 2 jours sync (binôme)
-
-> La numérotation des tâches est celle de l'énoncé Simplonline (1 → 12).
-> La tâche 4, c'est le déjeuner : elle compte aussi.
-
-| Quand | Tâche | Durée | Appui |
-|---|---|---|---|
-| Mardi 10h35 | 1. Tirage binôme + appropriation de la reprise M1 (modèle + API fournis) | 45 min | — |
-| Mardi 11h20 | 2. Architecture 3 services (`model` / `backend` / `frontend`) — 1ʳᵉ partie | 1h10 | [`01_Docker_compose`](./ressources/01_Docker_compose_multiservices_essentiel.md) |
-| Mardi 12h30 | 4. 🍽️ Déjeuner | 1h | — |
-| Mardi 13h30 | 2. Architecture 3 services — fin | 20 min | [`01_Docker_compose`](./ressources/01_Docker_compose_multiservices_essentiel.md) |
-| Mardi 13h50 | 3. Vérification `docker compose up` | 15 min | [`01_Docker_compose`](./ressources/01_Docker_compose_multiservices_essentiel.md) |
-| Mardi 14h05 | 5. Pipeline CI/CD GitHub Actions + *quality gate* (pause 15 min incluse) | 2h30 | [`03_GitHub_Actions`](./ressources/03_GitHub_Actions_CI_CD_essentiel.md) — appui [`06_Pair_coding`](./ressources/06_Pair_coding_sync_long_essentiel.md) |
-| Mardi 16h45 | 6. Mur réflexif intermédiaire | 15 min | — |
-| Mercredi 9h15 | 7. Endpoint `/metrics` + métriques métier | 30 min | [`02_FastAPI_metrics_Prometheus`](./ressources/02_FastAPI_metrics_Prometheus_essentiel.md) |
-| Mercredi 9h45 | 8. Prometheus + Grafana dans le compose | 30 min | [`02_FastAPI_metrics_Prometheus`](./ressources/02_FastAPI_metrics_Prometheus_essentiel.md) |
-| Mercredi 10h15 | 9. Dashboard Grafana custom (vie / vitesse / comportement) | 45 min | [`04_Grafana_dashboard`](./ressources/04_Grafana_dashboard_custom_essentiel.md) |
-| Mercredi 11h00 | 10. Runbook d'astreinte (4 procédures) | 30 min | [`05_Runbook_astreinte`](./ressources/05_Runbook_astreinte_essentiel.md) |
-| Mercredi 11h30 | 11. **Tour de table binômes** (démo compose + dashboard) | 1h | — |
-| Mercredi 12h30 | 12. Mur réflexif final M5-B1 + lancement M5-B2 | 30 min | — |
-
-> ⏱️ **Le jalon qui compte** : vos 3 services doivent démarrer **avant
-> d'attaquer la CI**. Si la tâche 3 n'est pas verte à 14h05, appelez —
-> la tâche 5 est la plus longue des deux jours, elle ne se rattrape pas.
-
-### M5-B2 — l'async individuel (jeudi + vendredi matin, 6 h)
-
-Vous repartez **chacun·e** du repo binôme, dans une branche perso
-`<prenom>/m5-b2-eval-continue`. Pas de nouveau repo.
-
-| Quand | Étape | Durée | Appui |
-|---|---|---|---|
-| Jeudi | 1. **Préparation du jeu de référence** — récupérer le holdout M1, en tirer **votre** `data/reference_set.csv` (~500 lignes), puis geler le golden run (`--freeze-baseline`) | 30 min | [`data/README.md`](./data/README.md) + [`08_Evaluation_continue_seuils`](./ressources/08_Evaluation_continue_seuils_essentiel.md) |
-| Jeudi | 2. `scripts/evaluate_model.py` + tracking **MLflow** (4 métriques, code retour 0 / non-zéro) | 1h30 | [`07_MLflow_tracking`](./ressources/07_MLflow_tracking_essentiel.md) + [`08`](./ressources/08_Evaluation_continue_seuils_essentiel.md) |
-| Jeudi | 3. Définition et **justification** des seuils (`evaluation_thresholds.md`) | 1h | [`08_Evaluation_continue_seuils`](./ressources/08_Evaluation_continue_seuils_essentiel.md) |
-| Vendredi | 4. Étape `evaluate-model` bloquante dans le workflow GitHub Actions | 1h | [`03_GitHub_Actions`](./ressources/03_GitHub_Actions_CI_CD_essentiel.md) |
-| Vendredi | 5. Tests pytest pour l'évaluation | 45 min | [`03_GitHub_Actions`](./ressources/03_GitHub_Actions_CI_CD_essentiel.md) |
-| Vendredi | 6. ⭐ Alerte Discord webhook (**bonus**) | 30 min | — |
-| Vendredi | 7. Doc + merge | 45 min | — |
-
-> ⚠️ **Le piège central de B2** : votre jeu de référence n'existe pas encore,
-> et le fichier `data/reference_set_TEMPLATE.csv` du repo n'en est **pas** un
-> (20 lignes = un exemple de format). C'est vous qui le construisez à partir du
-> holdout M1, et sa composition est une **décision à argumenter**.
-> Mode d'emploi : [`data/README.md`](./data/README.md).
-
-### ✅ Checklist livrables
-
-**M5-B1 — avant mercredi 12h30**
-
-- [ ] `docker compose up --build` démarre les **3 services** de façon **reproductible**, healthchecks verts
-- [ ] `/metrics` exposé côté `model` **et** `backend`
-- [ ] Dashboard Grafana provisionné **automatiquement** (3 panels : vie / vitesse / comportement)
-- [ ] Workflow CI **vert**, image poussée sur GHCR, tag `v1.0.0-prod`
-- [ ] Le **contract test** du modèle bloque la release s'il est rouge
-      *(il vérifie le **contrat technique** de l'API — pas la performance du
-      modèle : ça, c'est l'évaluation continue de B2)*
-- [ ] `runbook.md` — 4 procédures (Service KO / Latence / Métrique modèle / Rollback)
-- [ ] `README.md` — schéma Mermaid de l'archi + démarrage en 3 commandes
-- [ ] Commits binôme : `Co-authored-by:` ou auteurs nominatifs
-
-**M5-B2 — avant vendredi 17h**
-
-- [ ] `data/reference_set.csv` (~500 lignes) **construit par vous** depuis le holdout M1, figé, versionné
-- [ ] `data/reference_baseline.json` — le golden run, gelé sur **ce** jeu
-- [ ] `scripts/evaluate_model.py` — 4 métriques, ≥ 2 runs MLflow comparables
-- [ ] `evaluation_thresholds.md` — 4 métriques × golden run / plancher absolu / baisse max / **justification**, tolérance relative ≥ 2 σ (bootstrap)
-- [ ] Étape `evaluate-model` dans la CI : `--degrade` fait **échouer** la release
-      *(`mlruns/` est gitignoré : la preuve passe par l'**artefact CI**, pas par un commit)*
-
 ---
 
 ## 🏗️ Schéma d'architecture
@@ -171,21 +80,65 @@ scripts/evaluate_model_TEMPLATE.py   # B2 — MLflow pré-câblé
 evaluation_thresholds_TEMPLATE.md    # B2 — seuils à justifier
 ressources/                # 📚 mini-cours d'appui (lecture juste-à-temps)
 ```
-
-> Le service `model` (déjà fourni) est votre **exemple de référence** : il
-> expose déjà `/metrics` — répliquez ce pattern sur le `backend`.
-
 ---
 
-## 📚 Ressources
+## 🧪 Évaluation continue
+ 
+À chaque release, `scripts/evaluate_model.py` recalcule 4 métriques
+(F1 macro, F1 défaut, ROC-AUC, recall défaut) sur un jeu de référence figé
+(`data/reference_set.csv`, 500 lignes, composition 250 défauts / 250
+non-défauts — argumentée dans `evaluation_thresholds.md`), les compare au
+**golden run** gelé (`data/reference_baseline.json`), et bloque la release
+(code retour non-zéro → job CI `evaluate-model` rouge) si un seuil est
+dépassé.
+ 
+⚠️ Le garde-fou compare au golden run — **jamais** aux métriques du holdout
+M1 annoncées au client (F1 macro 0.613, cf. `services/model/models/pyrenex_risk_v2.json`,
+clé `metrics_holdout`) : les deux jeux n'ont ni la même taille ni la même
+composition, comparer les deux mesurerait un écart de population, pas une
+dégradation du modèle.
 
-Voir [`./ressources/`](./ressources/) — 8 mini-cours + `liens_officiels.md`.
-Lecture **juste-à-temps** : ouvrez le mini-cours de la tâche en cours.
-
----
-
-## 🆘 Bloqué·e·s ?
-
-1. Relisez le mini-cours de la tâche en cours (`ressources/`).
-2. Le service `model` est votre exemple qui marche : copiez ses patterns.
-3. 30 min sur un bloquant → Discord `fil-M5`.
+### Utilisation
+ 
+```bash
+python scripts/evaluate_model.py --freeze-baseline     # une fois, au gel du jeu de référence
+python scripts/evaluate_model.py --release-tag v2.0.0   # à chaque release
+python scripts/evaluate_model.py --release-tag test --degrade   # test du chemin rouge
+mlflow ui                                                # comparer les runs tracés (params + 4 métriques)
+```
+### Seuils
+ 
+Détail complet, chiffres mesurés et justifications dans
+[`evaluation_thresholds.md`](./evaluation_thresholds.md). Stratégie
+**hybride** : plancher absolu (métier) + tolérance relative fixée à **2σ**,
+le σ étant mesuré par bootstrap (500 tirages) sur le jeu de référence.
+ 
+### Procédure de mise à jour des seuils
+ 
+- **Qui** : la personne qui modifie le modèle ou le jeu de référence, revue
+  par Sophie Léger avant merge sur `main`.
+- **Quand** : uniquement lors d'un changement de modèle en profondeur
+  (nouvelle version majeure) ou du jeu de référence lui-même — jamais pour
+  faire passer une release au vert.
+- **Comment** : garder `THRESHOLDS` dans `scripts/evaluate_model.py` et
+  `evaluation_thresholds.md` strictement cohérents. Si le jeu de référence
+  change, **regeler le golden run** (`--freeze-baseline`) puis relancer le
+  bootstrap pour requantifier le bruit.
+### Preuve du chemin rouge (CI)
+ 
+Testé le 16/09/2026 en poussant une dégradation volontaire (`--degrade`,
+désalignement X/y) sur la branche `Tom` : le job `evaluate-model` du workflow
+GitHub Actions est passé rouge comme attendu — [lien ou capture du run à
+insérer].
+ 
+### Tests
+ 
+`tests/test_evaluation.py` (12 tests, câblés dans le job `test` de la CI) :
+logique des seuils (plancher absolu, tolérance relative), reproductibilité
+de la dégradation volontaire, cycle golden run (`freeze_baseline` /
+`load_baseline`), garde-fou sur la validité du jeu de référence (< 100 lignes
+ou mono-classe rejeté).
+ 
+```bash
+pytest -v tests/test_evaluation.py
+```
